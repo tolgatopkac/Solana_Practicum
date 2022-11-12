@@ -2,6 +2,9 @@ import { FC } from 'react';
 import { Movie } from '../models/Movie';
 import { useState } from 'react';
 import { Box, Button, FormControl, FormLabel, Input, NumberDecrementStepper, NumberIncrementStepper, NumberInput, NumberInputField, NumberInputStepper, Textarea } from '@chakra-ui/react';
+import * as Web3 from "@solana/web3.js";
+import { useConnection, useWallet } from '@solana/wallet-adapter-react'
+
 
 const MOVIE_REVIEW_PROGRAM_ID = 'CenYq6bDRB7p73EjsPEpiYN7uveyPUTdXkDkgUduboaN'
 
@@ -10,6 +13,11 @@ export const Form: FC = () => {
     const [rating, setRating] = useState(0)
     const [message, setMessage] = useState('')
 
+    
+    const { connection } = useConnection();
+    const { publicKey, sendTransaction } = useWallet();
+
+
     const handleSubmit = (event: any) => {
         event.preventDefault()
         const movie = new Movie(title, rating, message)
@@ -17,7 +25,55 @@ export const Form: FC = () => {
     }
 
     const handleTransactionSubmit = async (movie: Movie) => {
-        console.log(JSON.stringify(movie))
+        if(!publicKey){
+            alert('Please connect your wallet!')
+            return
+        }
+
+        const buffer = movie.serialize()
+        const transaction = new Web3.Transaction();
+
+        const [pda] = await Web3.PublicKey.findProgramAddress(
+            [publicKey.toBuffer(), new TextEncoder().encode(movie.title)],
+            new Web3.PublicKey(MOVIE_REVIEW_PROGRAM_ID)
+        )
+
+        const instruction = new Web3.TransactionInstruction({
+            keys:[
+                {
+                     // Your account will pay the fees, so it's writing to the network
+                    pubkey: publicKey,
+                    isSigner: true,
+                    isWritable: false,
+                },
+                {
+                    // The PDA will store the movie review 
+                    pubkey: pda,
+                    isSigner: false,
+                    isWritable: true
+                },
+                {
+                        // The system program will be used for creating the PDA
+                    pubkey: Web3.SystemProgram.programId,
+                    isSigner: false,
+                    isWritable: false
+                }
+                
+            ],
+            // Here's the most important part!
+            data:buffer,
+            programId: new Web3.PublicKey(MOVIE_REVIEW_PROGRAM_ID)
+        })
+                transaction.add(instruction)
+
+                  
+        try {
+            let txid = await sendTransaction(transaction, connection)
+            console.log(`Transaction submitted: https://explorer.solana.com/tx/${txid}?cluster=devnet`)
+        } catch (e) {
+            alert(JSON.stringify(e))
+        }
+
     }
 
     return (
