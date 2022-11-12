@@ -5,7 +5,7 @@ import * as Web3 from "@solana/web3.js";
 
 
 
-export const BalanceDisplay : FC = () => {
+export const Result : FC = () => {
   const [balance,setBalance] = useState(0);
 
   const {connection} = useConnection();
@@ -31,7 +31,7 @@ export const BalanceDisplay : FC = () => {
       </div>
 
       <div>
-        {publicKey ? `Balance: ${balance/ Web3.LAMPORTS_PER_SOL}` : ''};
+        {publicKey ? `Balance: ${balance/ Web3.LAMPORTS_PER_SOL}` : ''}
       </div>
 
     
